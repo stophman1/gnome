@@ -18,19 +18,19 @@ import java.util.Properties;
 
 
 public class wowapi {
-    private InputStream input = gnome.class.getClassLoader().getResourceAsStream("config.properties");
-    private Properties prop = PropertiesController.readPropertiesFile(input);
+    private final InputStream input = gnome.class.getClassLoader().getResourceAsStream("config.properties");
+    private final Properties prop = PropertiesController.readPropertiesFile(input);
     private static final ObjectMapper objectMapper = new ObjectMapper();
     private static final Duration CACHE_TTL = Duration.ofMinutes(5);
 
-    private HttpClient client = HttpClient.newBuilder()
+    private final HttpClient client = HttpClient.newBuilder()
             .followRedirects(HttpClient.Redirect.NORMAL)
             .build();
 
-    private String credentials = prop.getProperty("bcid") + ":" + prop.getProperty("btoken");
-    private String encodedAuth = Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
+    private final String credentials = prop.getProperty("bcid") + ":" + prop.getProperty("btoken");
+    private final String encodedAuth = Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
 
-    private HttpRequest request = HttpRequest.newBuilder()
+    private final HttpRequest request = HttpRequest.newBuilder()
             .uri(URI.create("https://oauth.battle.net/token"))
             .header("Authorization", "Basic " + encodedAuth)
             .header("Content-Type", "application/x-www-form-urlencoded")
@@ -44,17 +44,17 @@ public class wowapi {
     private final String token = json.substring(start, end);
     private final String die = token.replaceAll("[\\s\\r\\n]", "");
 
-    private String cachedCommodityBody = null;
-    private Instant commodityFetchTime = Instant.MIN;
+    static private String cachedCommodityBody = null;
+    static private Instant commodityFetchTime = Instant.MIN;
 
-    private String cachedNeutralCommodityBody = null;
-    private Instant neutralCommodityFetchTime = Instant.MIN;
+    static private String cachedNeutralCommodityBody = null;
+    static private Instant neutralCommodityFetchTime = Instant.MIN;
 
-    private String cachedBody = null;
-    private Instant fetchTime = Instant.MIN;
+    static private String cachedBody = null;
+    static private Instant fetchTime = Instant.MIN;
 
-    private String cachedNeutralBody = null;
-    private Instant neutralFetchTime = Instant.MIN;
+    static private String cachedNeutralBody = null;
+    static private Instant neutralFetchTime = Instant.MIN;
 
 
     public String temp() throws IOException, InterruptedException { //returns same ids for every ruleset :O.
@@ -92,24 +92,28 @@ public class wowapi {
     private synchronized String getAuctions() throws IOException, InterruptedException {
         if (cachedBody == null || Duration.between(fetchTime, Instant.now()).compareTo(CACHE_TTL) > 0) {
             cachedBody = auctionGet("https://us.api.blizzard.com/data/wow/ruleset/2/auctions/111");
+            fetchTime = Instant.now();
         }
         return cachedBody;
     }
     private synchronized String getCommodityAuctions() throws IOException, InterruptedException {
         if (cachedCommodityBody == null || Duration.between(commodityFetchTime, Instant.now()).compareTo(CACHE_TTL) > 0) {
             cachedCommodityBody = auctionGet("https://us.api.blizzard.com/data/wow/ruleset/2/auctions/111/commodities");
+            commodityFetchTime = Instant.now();
         }
         return cachedCommodityBody;
     }
     public String getNeutralAuctions() throws IOException, InterruptedException {
         if (cachedNeutralBody == null || Duration.between(neutralFetchTime, Instant.now()).compareTo(CACHE_TTL) > 0) {
             cachedNeutralBody = auctionGet("https://us.api.blizzard.com/data/wow/ruleset/2/auctions/117");
+            neutralFetchTime = Instant.now();
         }
         return cachedNeutralBody;
     }
     public String getNeutralCommodityAuctions() throws IOException, InterruptedException {
         if (cachedNeutralCommodityBody == null || Duration.between(neutralCommodityFetchTime, Instant.now()).compareTo(CACHE_TTL) > 0) {
-            cachedNeutralCommodityBody = auctionGet("https://us.api.blizzard.com/data/wow/ruleset/2/auctions/111/commodities");
+            cachedNeutralCommodityBody = auctionGet("https://us.api.blizzard.com/data/wow/ruleset/2/auctions/117/commodities");
+            neutralCommodityFetchTime = Instant.now();
         }
         return cachedNeutralCommodityBody;
     }
@@ -133,10 +137,9 @@ public class wowapi {
     }
     public int getItemID(String item) throws IOException, InterruptedException {
         JsonNode results = ItemSearch(item);
-        int id = -1;
         return (results != null && results.has("id")) ? results.get("id").asInt() : -1;
     }
-    record itemData(String name, String icon, String quality) {}
+    public record itemData(String name, String icon, String quality) {}
     public itemData getItemName(int itemID) throws IOException, InterruptedException {
         String encodedName = URLEncoder.encode(String.valueOf(itemID), StandardCharsets.UTF_8);
         JsonNode rootNode = objectMapper.readTree(staticGet(String.format(
@@ -166,9 +169,12 @@ public class wowapi {
             JsonNode itemNode = auction.get("item");
             if (itemNode != null && itemNode.get("id").asInt() == itemID) {
                 long price = auction.get(priceField).asLong();
+                int quantity = auction.get("quantity").asInt();
                 if (price < lowestPrice) {
                     lowestPrice = price;
-                    bestQuantity = auction.get("quantity").asInt();
+                    bestQuantity = quantity;
+                } else if (price == lowestPrice) {
+                    bestQuantity += quantity;
                 }
             }
         }

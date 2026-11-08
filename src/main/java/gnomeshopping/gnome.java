@@ -14,7 +14,7 @@ import java.io.InputStream;
 import java.util.Properties;
 
 public class gnome {
-    public static void main(String[] args) throws IOException, InterruptedException {
+    static void main() throws IOException, InterruptedException {
         InputStream input = gnome.class.getClassLoader().getResourceAsStream("config.properties");
         Properties prop = PropertiesController.readPropertiesFile(input);
         if (prop.getProperty("token").equals("INSERT_TOKEN")) {
@@ -27,6 +27,7 @@ public class gnome {
                 .build().awaitReady();
 
         CommandListUpdateAction commands = api.updateCommands();
+        //noinspection ResultOfMethodCallIgnored
         commands.addCommands(Commands.slash("price", "Get the current price of an item")
                 .setContexts(InteractionContextType.ALL)
                 .setIntegrationTypes(IntegrationType.ALL)

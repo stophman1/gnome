@@ -1,8 +1,6 @@
 package gnomeshopping;
 
-import net.dv8tion.jda.api.components.Components;
 import net.dv8tion.jda.api.components.container.Container;
-import net.dv8tion.jda.api.components.container.ContainerChildComponent;
 import net.dv8tion.jda.api.components.section.Section;
 import net.dv8tion.jda.api.components.section.SectionContentComponent;
 import net.dv8tion.jda.api.components.separator.Separator;
@@ -13,18 +11,15 @@ import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 
 import java.awt.*;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
 public class gnomebot extends ListenerAdapter {
-    InputStream input = gnome.class.getClassLoader().getResourceAsStream("config.properties");
-
-
-    public gnomebot() throws IOException {
+    public gnomebot()  {
     }
 
         @Override
@@ -32,12 +27,13 @@ public class gnomebot extends ListenerAdapter {
             switch (event.getName()) {
                 case "price":
                     try {
-                        price(event, event.getOption("query").getAsString());
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    } catch (InterruptedException e) {
+                        OptionMapping query = event.getOption("query");
+                        assert query != null;
+                        price(event, query.getAsString());
+                    } catch (IOException | InterruptedException e) {
                         throw new RuntimeException(e);
                     }
+                case "joe" : 
             }
         }
 
@@ -68,7 +64,7 @@ public class gnomebot extends ListenerAdapter {
             if (price.allyPrice() != 9.223372036854776E14) child.add(TextDisplay.of(String.format("Alliance AH: %s [%s]", formatCurrency(price.allyPrice()), price.allyquant())));
             if (price.nPrice() != 9.223372036854776E14) child.add(TextDisplay.of(String.format("Neutral AH: %s [%s]", formatCurrency(price.nPrice()), price.nquant())));
 
-                Container container = Container.of(
+            Container container = Container.of(
                         TextDisplay.of("## " + name.name()),
                         Section.of(
                                 Thumbnail.fromUrl(name.icon()).withDescription(name.name()),
