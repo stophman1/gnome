@@ -59,7 +59,7 @@ public class wowapi {
 
     public String temp() throws IOException, InterruptedException { //returns same ids for every ruleset :O.
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://us.api.blizzard.com/data/wow/ruleset/2/auctions/index"))
+                .uri(URI.create("https://us.api.blizzard.com/data/wow/ruleset/index"))
                 .header("Battlenet-Namespace", "dynamic-forever-us")
                 .header("Authorization", "Bearer " + die)
                 .GET()
@@ -72,6 +72,16 @@ public class wowapi {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .header("Battlenet-Namespace", "dynamic-forever-us")
+                .header("Authorization", "Bearer " + die)
+                .GET()
+                .build();
+        return client.send(request, HttpResponse.BodyHandlers.ofString()).body();
+    }
+
+    private String staticGet(String url) throws IOException, InterruptedException {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .header("Battlenet-Namespace", "static-forever-us")
                 .header("Authorization", "Bearer " + die)
                 .GET()
                 .build();
@@ -126,17 +136,23 @@ public class wowapi {
         int id = -1;
         return (results != null && results.has("id")) ? results.get("id").asInt() : -1;
     }
-    public String getItemName(String item) throws IOException, InterruptedException {
-        JsonNode results = ItemSearch(item);
-        if (results != null && results.has("name") && results.get("name").has("en_US")) {
-            // Extracts the true name from the first search result matching the name
-            return results.get("name").get("en_US").asText();
-        }
-        return "";
+    record itemData(String name, String icon, String quality) {}
+    public itemData getItemName(int itemID) throws IOException, InterruptedException {
+        String encodedName = URLEncoder.encode(String.valueOf(itemID), StandardCharsets.UTF_8);
+        JsonNode rootNode = objectMapper.readTree(staticGet(String.format(
+                "https://us.api.blizzard.com/data/wow/item/%s?locale=en_US", encodedName)));
+        JsonNode results = rootNode;
+        String name = (results != null && results.has("name") && !results.isEmpty()) ? results.get("name").asText() : "";
+        String quality = (results != null && results.has("quality") && !results.isEmpty()) ? results.get("quality").get("name").asText() : "";
+        rootNode = objectMapper.readTree(staticGet(String.format(
+                "https://us.api.blizzard.com/data/wow/media/item/%s?locale=en_US", encodedName)));
+        results = rootNode;
+        String icon = (results != null && results.has("assets") && !results.isEmpty()) ? results.get("assets").get(0).get("value").asText() : "";
+        return new itemData(name, icon, quality);
     }
 
 
-    public record Prices(Double allyPrice, int allyquant, Double nPrice, int nquant, boolean commodity) {}
+    public record Prices(Double allyPrice, int allyquant, Double nPrice, int nquant, boolean commodity, int itemID) {}
 
     private record AuctionData(long lowestPrice, int bestQuantity) {}
 
@@ -161,7 +177,7 @@ public class wowapi {
 
     public Prices getPrice(String name) throws IOException, InterruptedException {
         int itemID = getItemID(name);
-        if (itemID == -1) return new Prices(-1.0,-1,-1.0,-1, true);
+        if (itemID == -1) return new Prices(-1.0,-1,-1.0,-1, true, itemID);
 
         AuctionData commodityAuctions = getLowestPrice(getCommodityAuctions(), itemID, true);
         if (commodityAuctions.lowestPrice != Long.MAX_VALUE) { //Will probably be a commodity if it's on the city AH
@@ -170,7 +186,8 @@ public class wowapi {
                     commodityAuctions.bestQuantity,
                     NeutralCommodityAuctions.lowestPrice / 10000.0,
                     NeutralCommodityAuctions.bestQuantity,
-                    true);
+                    true,
+                    itemID);
         }
         AuctionData auctions = getLowestPrice(getAuctions(), itemID, false);
         AuctionData neutralAuctions = getLowestPrice(getNeutralAuctions(), itemID, false);
@@ -179,7 +196,8 @@ public class wowapi {
                 auctions.bestQuantity,
                 neutralAuctions.lowestPrice / 10000.0,
                 neutralAuctions.bestQuantity,
-                false);
+                false,
+                itemID);
     }
 
     public wowapi() throws IOException, InterruptedException {

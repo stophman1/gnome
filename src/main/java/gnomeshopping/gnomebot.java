@@ -1,15 +1,24 @@
 package gnomeshopping;
 
-import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.components.Components;
+import net.dv8tion.jda.api.components.container.Container;
+import net.dv8tion.jda.api.components.container.ContainerChildComponent;
+import net.dv8tion.jda.api.components.section.Section;
+import net.dv8tion.jda.api.components.section.SectionContentComponent;
+import net.dv8tion.jda.api.components.separator.Separator;
+import net.dv8tion.jda.api.components.textdisplay.TextDisplay;
+import net.dv8tion.jda.api.components.thumbnail.Thumbnail;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 
+import java.awt.*;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Properties;
+import java.util.ArrayList;
+import java.util.List;
 
 public class gnomebot extends ListenerAdapter {
     InputStream input = gnome.class.getClassLoader().getResourceAsStream("config.properties");
@@ -48,13 +57,44 @@ public class gnomebot extends ListenerAdapter {
             event.deferReply().queue();
             wowapi wow = new wowapi();
             wowapi.Prices price = wow.getPrice(query);
-            if (price.commodity() && ((price.allyquant() == -1) && (price.nquant() == -1))) {
+            if (price.itemID() == -1) {
                 event.getHook().sendMessage("Couldn't find your item bub.").queue();
                 return;
             }
+            wowapi.itemData name = wow.getItemName(price.itemID());
 
-            event.getHook().sendMessage(String.format("Yo yo yo here is the price of the %s: %s we got %s. Netural price: %s, %s of them",
-                    wow.getItemName(query),formatCurrency(price.allyPrice()), price.allyquant(), formatCurrency(price.nPrice()), price.nquant())).queue();
+            List<SectionContentComponent> child = new ArrayList<>();
+            child.add(TextDisplay.of(name.quality()));
+            if (price.allyPrice() != 9.223372036854776E14) child.add(TextDisplay.of(String.format("Alliance AH: %s [%s]", formatCurrency(price.allyPrice()), price.allyquant())));
+            if (price.nPrice() != 9.223372036854776E14) child.add(TextDisplay.of(String.format("Neutral AH: %s [%s]", formatCurrency(price.nPrice()), price.nquant())));
+
+                Container container = Container.of(
+                        TextDisplay.of("## " + name.name()),
+                        Section.of(
+                                Thumbnail.fromUrl(name.icon()).withDescription(name.name()),
+                                child
+                        ),
+                        Separator.createDivider(Separator.Spacing.SMALL),
+                        TextDisplay.of("-# V0.1")
+                ).withAccentColor(new Color(getColor(name.quality())));
+
+
+            //event.getHook().sendMessage(String.format("Yo yo yo here is the price of the %s: %s we got %s. Neutral price: %s, %s of them",
+            //        name.name(),formatCurrency(price.allyPrice()), price.allyquant(), formatCurrency(price.nPrice()), price.nquant())).queue();
+            event.getHook().sendMessageComponents(container).useComponentsV2().queue();
+        }
+
+        private int getColor(String quality) {
+            return switch (quality) {
+                case "Common" -> 16777215;
+                case "Uncommon" -> 2031360;
+                case "Rare" -> 28893;
+                case "Epic" -> 10696174;
+                case "Legendary" -> 16744448;
+                case "Artifact" -> 15125632;
+                case "Heirloom" -> 52479;
+                default -> 16777215;
+            };
         }
 
 
