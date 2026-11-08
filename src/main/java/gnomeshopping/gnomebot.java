@@ -44,14 +44,16 @@ public class gnomebot extends ListenerAdapter {
         }
 
         public void price(SlashCommandInteractionEvent event, String query) throws IOException, InterruptedException {
+            //todo handle sentinels and make it look all fancy
+            event.deferReply().queue();
             wowapi wow = new wowapi();
             wowapi.Prices price = wow.getPrice(query);
             if (price.commodity() && ((price.allyquant() == -1) && (price.nquant() == -1))) {
-                event.reply("Couldn't find your item bub.").queue();
+                event.getHook().sendMessage("Couldn't find your item bub.").queue();
                 return;
             }
 
-            event.reply(String.format("Yo yo yo here is the price of the %s: %s we got %s. Netural price: %s, %s of them",
+            event.getHook().sendMessage(String.format("Yo yo yo here is the price of the %s: %s we got %s. Netural price: %s, %s of them",
                     wow.getItemName(query),formatCurrency(price.allyPrice()), price.allyquant(), formatCurrency(price.nPrice()), price.nquant())).queue();
         }
 

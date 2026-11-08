@@ -171,10 +171,39 @@ public class wowapi {
             double lowestNeutralPriceGold = lowestNeutralPrice / 10000.0;
             return new Prices(lowestPriceGold,bestQuantity,lowestNeutralPriceGold,bestNeutralQuantity, true);
         }
-
         String auctions = getAuctions();
+        rootNode = objectMapper.readTree(auctions);
+        JsonNode AuctionsJson = rootNode.get("auctions");
+        for (JsonNode auction : AuctionsJson) {
+            JsonNode itemNode = auction.get("item");
+            if (itemNode != null && itemNode.get("id").asInt() == itemID) {
+                long price = auction.get("buyout").asLong();
+                if (price < lowestPrice) {
+                    lowestPrice = price;
+                    bestQuantity = auction.get("quantity").asInt();
+                }
+            }
+        }
+
         String neutralAuctions = getNeutralAuctions();
-        return new Prices(-1.0,-1,-1.0,-1, true);
+        rootNode = objectMapper.readTree(auctions);
+        AuctionsJson = rootNode.get("auctions");
+        long lowestNeutralPrice = Long.MAX_VALUE;;
+        int bestNeutralQuantity = -1;
+        for (JsonNode auction : AuctionsJson) {
+            JsonNode itemNode = auction.get("item");
+            if (itemNode != null && itemNode.get("id").asInt() == itemID) {
+                long price = auction.get("buyout").asLong();
+                if (price < lowestPrice) {
+                    lowestNeutralPrice = price;
+                    bestNeutralQuantity = auction.get("quantity").asInt();
+                }
+            }
+        }
+
+        double lowestPriceGold = lowestPrice / 10000.0;
+        double lowestNeutralPriceGold = lowestNeutralPrice / 10000.0;
+        return new Prices(lowestPriceGold,bestQuantity,lowestNeutralPriceGold,bestNeutralQuantity, false);
 
     }
 
