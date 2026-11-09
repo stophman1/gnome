@@ -14,7 +14,7 @@ import java.io.InputStream;
 import java.util.Properties;
 
 public class gnome {
-    static void main() throws IOException, InterruptedException {
+    public static void main(String[] args) throws IOException, InterruptedException {
         InputStream input = gnome.class.getClassLoader().getResourceAsStream("config.properties");
         Properties prop = PropertiesController.readPropertiesFile(input);
         if (prop.getProperty("token").equals("INSERT_TOKEN")) {

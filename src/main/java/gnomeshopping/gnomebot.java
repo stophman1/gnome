@@ -61,11 +61,15 @@ public class gnomebot extends ListenerAdapter {
 
             List<SectionContentComponent> child = new ArrayList<>();
             child.add(TextDisplay.of(name.quality()));
-            if (price.allyPrice() != 9.223372036854776E14) child.add(TextDisplay.of(String.format("Alliance AH: %s [%s]", formatCurrency(price.allyPrice()), price.allyquant())));
-            if (price.nPrice() != 9.223372036854776E14) child.add(TextDisplay.of(String.format("Neutral AH: %s [%s]", formatCurrency(price.nPrice()), price.nquant())));
+            if (price.allyPrice() != 9.223372036854776E14) {
+                child.add(TextDisplay.of(String.format("Alliance AH: %s Total at Price: %s", formatCurrency(price.allyPrice()), price.allyquant())));
+            }
+            if (price.nPrice() != 9.223372036854776E14) {
+                child.add(TextDisplay.of(String.format("Neutral AH: %s Total at Price: %s", formatCurrency(price.nPrice()), price.nquant())));
+            }
 
             Container container = Container.of(
-                        TextDisplay.of("## " + name.name()),
+                        TextDisplay.of("## [" + name.name()+"](https://www.wowhead.com/forever/item="+ price.itemID()+")"),
                         Section.of(
                                 Thumbnail.fromUrl(name.icon()).withDescription(name.name()),
                                 child
